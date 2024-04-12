@@ -1,5 +1,5 @@
 # This file is designed to only used by goreleaser.
-FROM golang:1.18.4 AS builder
+FROM golang:1.20.0-alpine3.18 AS builder
 
 RUN update-ca-certificates
 
