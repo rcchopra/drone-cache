@@ -6,6 +6,7 @@ import "time"
 type Config struct {
 	AccountName      string
 	AccountKey       string
+	SASToken         string
 	ContainerName    string
 	BlobStorageURL   string
 	CDNHost          string
