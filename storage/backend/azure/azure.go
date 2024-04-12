@@ -29,12 +29,12 @@ const (
 
 // Backend implements sotrage.Backend for Azure Blob Storage.
 type Backend struct {
-	logger       log.Logger
-	httpClient   *http.Client
-	cfg          Config
-	containerURL azblob.ContainerURL
-	sasToken     string
-	// sharedKeyCredential *azblob.SharedKeyCredential
+	logger              log.Logger
+	httpClient          *http.Client
+	cfg                 Config
+	containerURL        azblob.ContainerURL
+	sasToken            string
+	sharedKeyCredential azblob.StorageAccountCredential
 }
 
 // New creates an AzureBlob backend.
@@ -42,7 +42,11 @@ func New(l log.Logger, c Config) (*Backend, error) {
 	var credential azblob.Credential
 
 	var err error
-
+	b := &Backend{
+		logger:     l,
+		cfg:        c,
+		httpClient: http.DefaultClient,
+	}
 	if c.AccountName == "" {
 		return nil, errors.New("azure account name is required")
 	}
@@ -56,6 +60,11 @@ func New(l log.Logger, c Config) (*Backend, error) {
 		credential, err = azblob.NewSharedKeyCredential(c.AccountName, c.AccountKey)
 		if err != nil {
 			return nil, fmt.Errorf("azure, invalid credentials, %w", err)
+		}
+		var ok bool
+		b.sharedKeyCredential, ok = credential.(azblob.StorageAccountCredential)
+		if !ok {
+			return nil, errors.New("azure, invalid credentials")
 		}
 	}
 
@@ -98,13 +107,9 @@ func New(l log.Logger, c Config) (*Backend, error) {
 			level.Error(l).Log("msg", "container already exists", "err", err)
 		}
 	}
-
-	return &Backend{
-		logger:       l,
-		cfg:          c,
-		containerURL: containerURL,
-		httpClient:   http.DefaultClient,
-	}, nil
+	b.containerURL = containerURL
+	b.sasToken = c.SASToken
+	return b, nil
 }
 
 // Get writes downloaded content to the given writer.
@@ -207,14 +212,31 @@ func (b *Backend) generateSASTokenWithCDN(containerName, blobPath string) (strin
 		containerName = strings.Replace(containerName, "\\", "/", -1) // Replace backslashes with forward slashes
 		blobPath = strings.Replace(blobPath, "\\", "/", -1)           // Replace backslashes with forward slashes
 	}
-
 	parts := azblob.BlobURLParts{
 		Scheme:        "https",
 		Host:          b.cfg.CDNHost,
 		ContainerName: containerName,
 		BlobName:      blobPath,
 	}
-	rawURL := parts.URL()
-	rawURL.RawQuery = b.sasToken
+	var rawURL url.URL
+	if b.sasToken == "" {
+		sasDefaultSignature := azblob.BlobSASSignatureValues{
+			Protocol:      azblob.SASProtocolHTTPS,
+			ExpiryTime:    time.Now().UTC().Add(12 * time.Hour),
+			ContainerName: containerName,
+			BlobName:      blobPath,
+			Permissions:   azblob.BlobSASPermissions{Read: true, List: true}.String(),
+		}
+		sasQueryParams, err := sasDefaultSignature.NewSASQueryParameters(b.sharedKeyCredential)
+		if err != nil {
+			return "", err
+		}
+		parts.SAS = sasQueryParams
+		rawURL = parts.URL()
+	} else {
+		rawURL = parts.URL()
+		rawURL.RawQuery = b.sasToken
+	}
+
 	return rawURL.String(), nil
 }
