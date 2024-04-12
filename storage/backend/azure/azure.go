@@ -23,30 +23,40 @@ const (
 	// DefaultBlobMaxRetryRequests Default value for Azure Blob Storage Max Retry Requests.
 	DefaultBlobMaxRetryRequests = 4
 
-	defaultBufferSize = 3 * 1024 * 1024
+	defaultBufferSize = 4 * 1024 * 1024
 	defaultMaxBuffers = 4
 )
 
 // Backend implements sotrage.Backend for Azure Blob Storage.
 type Backend struct {
-	logger              log.Logger
-	httpClient          *http.Client
-	cfg                 Config
-	containerURL        azblob.ContainerURL
-	sharedKeyCredential *azblob.SharedKeyCredential
+	logger       log.Logger
+	httpClient   *http.Client
+	cfg          Config
+	containerURL azblob.ContainerURL
+	sasToken     string
+	// sharedKeyCredential *azblob.SharedKeyCredential
 }
 
 // New creates an AzureBlob backend.
 func New(l log.Logger, c Config) (*Backend, error) {
-	// 1. From the Azure portal, get your storage account name and key and set environment variables.
-	if c.AccountName == "" || c.AccountKey == "" {
-		return nil, errors.New("either the AZURE_ACCOUNT_NAME or AZURE_ACCOUNT_KEY environment variable is not set")
-	}
+	var credential azblob.Credential
 
+	var err error
+
+	if c.AccountName == "" {
+		return nil, errors.New("azure account name is required")
+	}
 	// 2. Create a default request pipeline using your storage account name and account key.
-	credential, err := azblob.NewSharedKeyCredential(c.AccountName, c.AccountKey)
-	if err != nil {
-		return nil, fmt.Errorf("azure, invalid credentials, %w", err)
+	if c.SASToken != "" {
+		level.Info(l).Log("msg", "using token for cache operation")
+		credential = azblob.NewAnonymousCredential()
+	} else if c.AccountKey == "" {
+		return nil, errors.New("azure account key is required")
+	} else if c.AccountKey != "" {
+		credential, err = azblob.NewSharedKeyCredential(c.AccountName, c.AccountKey)
+		if err != nil {
+			return nil, fmt.Errorf("azure, invalid credentials, %w", err)
+		}
 	}
 
 	// 3. Azurite has different URL pattern than production Azure Blob Storage.
@@ -55,6 +65,10 @@ func New(l log.Logger, c Config) (*Backend, error) {
 		blobURL, err = url.Parse(fmt.Sprintf("http://%s/%s/%s", c.BlobStorageURL, c.AccountName, c.ContainerName))
 	} else {
 		blobURL, err = url.Parse(fmt.Sprintf("https://%s.%s/%s", c.AccountName, c.BlobStorageURL, c.ContainerName))
+	}
+
+	if c.SASToken != "" {
+		blobURL.RawQuery = c.SASToken
 	}
 
 	if err != nil {
@@ -85,9 +99,11 @@ func New(l log.Logger, c Config) (*Backend, error) {
 		}
 	}
 
-	return &Backend{logger: l, cfg: c, containerURL: containerURL,
-		httpClient:          http.DefaultClient,
-		sharedKeyCredential: credential,
+	return &Backend{
+		logger:       l,
+		cfg:          c,
+		containerURL: containerURL,
+		httpClient:   http.DefaultClient,
 	}, nil
 }
 
@@ -127,8 +143,8 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 
 		} else {
 			blobURL := b.containerURL.NewBlockBlobURL(p)
-			// nolint: lll
-			resp, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false, azblob.ClientProvidedKeyOptions{})
+			resp, err := blobURL.Download(ctx, 0, azblob.CountToEnd,
+				azblob.BlobAccessConditions{}, false, azblob.ClientProvidedKeyOptions{})
 			if err != nil {
 				errCh <- fmt.Errorf("get the object, %w", err)
 
@@ -187,31 +203,18 @@ func (b *Backend) Exists(ctx context.Context, p string) (bool, error) {
 
 // Exists checks if path already exists.
 func (b *Backend) generateSASTokenWithCDN(containerName, blobPath string) (string, error) {
-
 	if runtime.GOOS == "windows" {
 		containerName = strings.Replace(containerName, "\\", "/", -1) // Replace backslashes with forward slashes
 		blobPath = strings.Replace(blobPath, "\\", "/", -1)           // Replace backslashes with forward slashes
 	}
 
-	sasDefaultSignature := azblob.BlobSASSignatureValues{
-		Protocol:      azblob.SASProtocolHTTPS,
-		ExpiryTime:    time.Now().UTC().Add(12 * time.Hour),
-		ContainerName: containerName,
-		BlobName:      blobPath,
-		Permissions:   azblob.BlobSASPermissions{Read: true, List: true}.String(),
-	}
-	sasQueryParams, err := sasDefaultSignature.NewSASQueryParameters(b.sharedKeyCredential)
-	if err != nil {
-		return "", err
-	}
 	parts := azblob.BlobURLParts{
 		Scheme:        "https",
 		Host:          b.cfg.CDNHost,
 		ContainerName: containerName,
 		BlobName:      blobPath,
-		SAS:           sasQueryParams,
 	}
-
 	rawURL := parts.URL()
+	rawURL.RawQuery = b.sasToken
 	return rawURL.String(), nil
 }

@@ -422,6 +422,11 @@ func main() {
 			EnvVars: []string{"PLUGIN_ACCOUNT_NAME", "AZURE_ACCOUNT_NAME"},
 		},
 		&cli.StringFlag{
+			Name:    "azure.sas-token",
+			Usage:   "Azure Blob Storage SAS Token",
+			EnvVars: []string{"AZURE_SAS_TOKEN"},
+		},
+		&cli.StringFlag{
 			Name:    "azure.account-key",
 			Usage:   "Azure Blob Storage Account Key",
 			EnvVars: []string{"PLUGIN_ACCOUNT_KEY", "AZURE_ACCOUNT_KEY"},
@@ -587,6 +592,7 @@ func run(c *cli.Context) error {
 		},
 		Azure: azure.Config{
 			AccountName:    c.String("azure.account-name"),
+			SASToken:       c.String("azure.sas-token"),
 			AccountKey:     c.String("azure.account-key"),
 			ContainerName:  c.String("azure.container-name"),
 			BlobStorageURL: c.String("azure.blob-storage-url"),
