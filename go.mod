@@ -1,6 +1,6 @@
 module github.com/meltwater/drone-cache
 
-go 1.20
+go 1.21
 
 require (
 	cloud.google.com/go/storage v1.30.1
@@ -11,20 +11,19 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-kit/log v0.2.1
 	github.com/google/go-cmp v0.5.9
-	github.com/hashicorp/go-retryablehttp v0.7.4
+	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/klauspost/compress v1.15.9
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.11.0
 	github.com/urfave/cli/v2 v2.14.1
 	golang.org/x/crypto v0.17.0
-	golang.org/x/oauth2 v0.10.0
+	golang.org/x/oauth2 v0.22.0
 	google.golang.org/api v0.126.0
 )
 
 require (
 	cloud.google.com/go v0.110.4 // indirect
-	cloud.google.com/go/compute v1.21.0 // indirect
-	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.1 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -44,7 +43,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect

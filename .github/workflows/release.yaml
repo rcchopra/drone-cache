@@ -9,22 +9,17 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Unshallow
+      - name: Unshallow
         run: git fetch --prune --unshallow
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20.x
-      -
-        name: Set up UPX
+          go-version: 1.21.x
+      - name: Set up UPX
         run: sudo apt-get update && sudo apt-get install upx-ucl
-      -
-        name: Run GoReleaser for Release
+      - name: Run GoReleaser for Release
         uses: goreleaser/goreleaser-action@v3
         with:
           version: v1.11.4
