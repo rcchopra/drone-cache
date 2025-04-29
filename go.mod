@@ -1,6 +1,8 @@
 module github.com/meltwater/drone-cache
 
-go 1.21
+go 1.23.0
+
+toolchain go1.23.8
 
 require (
 	cloud.google.com/go/storage v1.30.1
@@ -16,7 +18,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.11.0
 	github.com/urfave/cli/v2 v2.14.1
-	golang.org/x/crypto v0.25.0
+	golang.org/x/crypto v0.37.0
 	golang.org/x/oauth2 v0.22.0
 	google.golang.org/api v0.126.0
 )
@@ -42,9 +44,9 @@ require (
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
